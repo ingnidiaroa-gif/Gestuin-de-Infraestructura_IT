@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>War Room CloudOps — Actividad interactiva</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --panel:#ffffff; --text:#162235; --muted:#5f6b7a; --line:#dfe5ec;
+      --accent:#22577a; --accent2:#38a3a5; --ok:#2f855a; --warn:#b7791f; --danger:#b8323a;
+      --soft:#eef4f8; --soft2:#edf8f7; --shadow:0 10px 30px rgba(20,35,55,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+    .app{max-width:1180px;margin:auto;padding:20px}
+    .hero{background:linear-gradient(135deg,#183b56,#22577a 60%,#2f7c86);color:#fff;border-radius:18px;padding:24px;box-shadow:var(--shadow)}
+    .hero h1{margin:0 0 8px;font-size:clamp(1.6rem,3vw,2.5rem)}
+    .hero p{margin:0;max-width:900px;color:#e6f3f7}
+    .topbar{margin-top:16px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+    .panel h2,.panel h3{margin-top:0}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    button{border:0;border-radius:10px;padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;min-height:42px}
+    button.secondary{background:#e8eef3;color:#234}
+    button.good{background:var(--ok)}
+    button.warn{background:var(--warn)}
+    button.danger{background:var(--danger)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .timer{font-size:1.55rem;font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:.04em;padding:7px 12px;background:#102a43;color:#fff;border-radius:10px;display:inline-block}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .pill{padding:6px 10px;border-radius:999px;background:var(--soft);font-size:.88rem;font-weight:700}
+    .pill.live{background:#ffe7e7;color:#8b1e24}
+    .pill.teacher{background:#fff4d8;color:#7b5612}
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:16px;align-items:start}
+    .phase-nav{position:sticky;top:12px}
+    .phase-nav button{width:100%;text-align:left;background:transparent;color:var(--text);border:1px solid var(--line);margin:4px 0;font-weight:650;padding:9px 10px}
+    .phase-nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .phase-nav button.done::after{content:" ✓";color:var(--ok)}
+    .phase-nav button.active.done::after{color:#fff}
+    .stage{display:none}
+    .stage.active{display:block}
+    .stage-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .stage-number{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+    .event{border-left:5px solid var(--accent2);background:var(--soft2);padding:14px 16px;border-radius:12px;margin:12px 0 16px}
+    .event.danger{border-color:var(--danger);background:#fff0f0}
+    .event.warn{border-color:var(--warn);background:#fff8e8}
+    .event h3{margin:0 0 5px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    label{display:block;font-weight:700;margin:10px 0 5px}
+    textarea,input[type="text"],select{width:100%;padding:10px 11px;border:1px solid #c9d3dd;border-radius:9px;font:inherit;background:#fff;color:var(--text)}
+    textarea{min-height:90px;resize:vertical}
+    table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.94rem}
+    th,td{border:1px solid var(--line);padding:9px;vertical-align:top;text-align:left}
+    th{background:#eef3f7}
+    .choice{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;background:#fff}
+    .choice label{margin:0;font-weight:600;display:flex;gap:9px;align-items:flex-start}
+    input[type="radio"],input[type="checkbox"]{margin-top:4px;transform:scale(1.15)}
+    .solution{display:none;margin-top:14px;border:1px dashed #d7b45f;background:#fff9e8;border-radius:12px;padding:14px}
+    .teacher-mode .solution{display:block}
+    .student-hide{display:block}
+    .teacher-mode .student-hide{display:block}
+    .callout{padding:12px 14px;border-radius:12px;background:#edf2f7;border-left:4px solid #718096;margin:12px 0}
+    .callout.ok{background:#edf8f1;border-color:var(--ok)}
+    .callout.danger{background:#fff0f0;border-color:var(--danger)}
+    .callout.info{background:#edf7fb;border-color:var(--accent)}
+    .mini{font-size:.88rem;color:var(--muted)}
+    .scorebox{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+    .scorebox label{margin:0;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;font-weight:700;background:#fff;cursor:pointer}
+    .scorebox input{margin-right:5px}
+    .footer-actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+    .ref{font-size:.9rem;word-break:break-word;margin:.55rem 0}
+    .hidden{display:none !important}
+    .status{margin-top:8px;font-size:.9rem;color:var(--muted)}
+    .summary-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;margin:8px 0}
+    .matrix-input{width:70px !important;text-align:center}
+    .progress-wrap{height:10px;background:#e6ebf0;border-radius:999px;overflow:hidden;margin-top:10px}
+    .progress{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s ease}
+    @media(max-width:850px){
+      .topbar,.layout,.grid2,.grid3{grid-template-columns:1fr}
+      .phase-nav{position:static}
+      .phase-nav .nav-list{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+      .scorebox{grid-template-columns:1fr}
+    }
+    @media print{
+      body{background:#fff}
+      .controls,.phase-nav,.footer-actions,.hero .mini{display:none!important}
+      .layout{display:block}.stage{display:block!important;page-break-inside:avoid}.solution{display:block!important}
+      .panel,.hero{box-shadow:none}.hero{background:#fff;color:#000;border:1px solid #ccc}.hero p{color:#333}
+    }
+  </style>
+</head>
+<body>
+<div class="app" id="warRoomApp">
+  <section class="hero">
+    <h1>War Room CloudOps — NovaMarket</h1>
+    <p>Simulación guiada de respuesta a incidentes para la asignatura <strong>Gestión de Infraestructuras de TI</strong>. El grupo asumirá el rol de equipo de operaciones, tomará decisiones con información incompleta y cerrará con un postmortem y plan de mejora.</p>
+    <div class="meta">
+      <span class="pill">Metodología: War Room</span>
+      <span class="pill">Duración sugerida: 110–130 min</span>
+      <span class="pill">Equipos: 4 estudiantes</span>
+      <span class="pill live">Caso evolutivo</span>
+    </div>
+  </section>
+
+  <div class="topbar">
+    <section class="panel">
+      <h2>Panel de facilitación</h2>
+      <div class="controls">
+        <button id="prevBtn" class="secondary" type="button">← Fase anterior</button>
+        <button id="nextBtn" type="button">Siguiente evento →</button>
+        <button id="teacherBtn" class="warn" type="button">Activar modo docente</button>
+        <button id="printBtn" class="secondary" type="button">Imprimir / PDF</button>
+        <button id="resetBtn" class="danger" type="button">Reiniciar</button>
+      </div>
+      <div class="progress-wrap" aria-label="Progreso de la actividad"><div class="progress" id="progressBar"></div></div>
+      <div class="status" id="modeStatus">Modo estudiante: las soluciones permanecen ocultas.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Reloj de War Room</h2>
+      <div class="controls">
+        <span class="timer" id="timer">00:00</span>
+        <button id="startTimer" class="good" type="button">Iniciar</button>
+        <button id="pauseTimer" class="secondary" type="button">Pausar</button>
+        <button id="resetTimer" class="secondary" type="button">Cero</button>
+      </div>
+      <p class="mini">Sugerencia: use 8–12 minutos por fase. El reloj no limita la actividad; sirve para crear presión controlada.</p>
+    </section>
+  </div>
+
+  <div class="layout">
+    <aside class="panel phase-nav">
+      <h3>Ruta del incidente</h3>
+      <div class="nav-list" id="phaseNav"></div>
+      <div class="callout info mini"><strong>Docente:</strong> libere los eventos uno por uno. No muestre el siguiente escenario antes de que el equipo registre su análisis.</div>
+    </aside>
+
+    <main class="panel" id="stageArea">
+
+      <section class="stage active" data-stage="0" data-title="Preparación del equipo">
+        <div class="stage-header"><div><div class="stage-number">Fase 0</div><h2>Preparar la War Room</h2></div><span class="pill">PMI + Google SRE</span></div>
+        <div class="event">
+          <h3>Contexto empresarial</h3>
+          <p><strong>NovaMarket</strong> opera un comercio electrónico 24×7. Tiene portal web, dos máquinas virtuales, balanceador, base de datos, almacenamiento, Microsoft Entra ID y Azure Monitor. Hoy inicia la campaña <strong>CyberNova</strong>, con una demanda muy superior a la habitual.</p>
+        </div>
+        <p>Antes de conocer el incidente, el equipo debe organizarse. Cada persona selecciona un rol y acuerda cómo trabajará.</p>
+        <div class="grid2">
+          <div>
+            <label>Incident Commander</label><input type="text" data-save="role_ic" placeholder="Nombre">
+            <label>Operations Lead</label><input type="text" data-save="role_ops" placeholder="Nombre">
+          </div>
+          <div>
+            <label>Communications Lead</label><input type="text" data-save="role_comms" placeholder="Nombre">
+            <label>Scribe / Analista</label><input type="text" data-save="role_scribe" placeholder="Nombre">
+          </div>
+        </div>
+        <label>Acuerdos del equipo: ¿quién decide, cómo se comunican y cómo documentan?</label>
+        <textarea data-save="team_rules" placeholder="Escriban 3 a 5 acuerdos concretos..."></textarea>
+        <div class="solution">
+          <strong>Guía docente / solución esperada:</strong>
+          <p>No existe una única distribución correcta. Debe haber responsabilidades diferenciadas, canal de coordinación, registro de decisiones y un criterio claro para escalar cambios. La lectura de PMI respalda orientar al equipo, definir estructura, objetivos y normas; la lectura de Google muestra la utilidad de roles claros durante incidentes.</p>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="1" data-title="Alerta inicial">
+        <div class="stage-header"><div><div class="stage-number">Fase 1</div><h2>La primera alerta</h2></div><span class="pill">Detectar</span></div>
+        <div class="event warn"><h3>18:05 — Azure Monitor</h3><p>El tiempo de respuesta del portal pasó de <strong>600 ms a 4,8 s</strong>. La CPU de las dos VM supera el <strong>92 %</strong>. Los clientes comienzan a reportar lentitud al finalizar sus compras.</p></div>
+        <div class="grid2">
+          <div><label>¿Qué observamos?</label><textarea data-save="s1_observe"></textarea></div>
+          <div><label>¿Qué servicio y usuarios están afectados?</label><textarea data-save="s1_scope"></textarea></div>
+          <div><label>¿Cuál es el impacto empresarial preliminar?</label><textarea data-save="s1_impact"></textarea></div>
+          <div><label>¿Qué información adicional necesitan antes de actuar?</label><textarea data-save="s1_info"></textarea></div>
+        </div>
+        <div class="callout danger"><strong>Regla de la fase:</strong> todavía no propongan solución. Primero separen <strong>síntomas</strong> de <strong>causas</strong>.</div>
+        <div class="solution"><strong>Guía docente:</strong> síntomas confirmados: alta latencia, alta CPU y experiencia degradada. Aún no hay evidencia suficiente para afirmar si el problema está en capacidad, aplicación, base de datos, red o combinación de factores.</div>
+      </section>
+
+      <section class="stage" data-stage="2" data-title="Escalamiento automático">
+        <div class="stage-header"><div><div class="stage-number">Fase 2</div><h2>La demanda se dispara</h2></div><span class="pill">Hipótesis</span></div>
+        <div class="event"><h3>18:12 — Nueva evidencia</h3><p>El número de usuarios conectados es aproximadamente <strong>4 veces</strong> superior al promedio. El sistema intenta crear automáticamente una tercera VM.</p></div>
+        <label>¿Qué esperaban que ocurriera con el autoescalado?</label>
+        <textarea data-save="s2_expected" placeholder="Describan el comportamiento esperado..."></textarea>
+        <label>Formulen al menos 3 hipótesis sobre la degradación, sin dar ninguna por confirmada.</label>
+        <textarea data-save="s2_hypotheses" placeholder="H1..., H2..., H3..."></textarea>
+        <div class="solution"><strong>Guía docente:</strong> una hipótesis razonable es saturación por aumento de tráfico, pero todavía deben considerar comportamiento de la aplicación, consultas a datos, red y disponibilidad de capacidad para escalar.</div>
+      </section>
+
+      <section class="stage" data-stage="3" data-title="ZonalAllocationFailed">
+        <div class="stage-header"><div><div class="stage-number">Fase 3</div><h2>Falla el escalamiento</h2></div><span class="pill">Microsoft Learn</span></div>
+        <div class="event danger"><h3>18:14 — Error de Azure</h3><p>La creación de la nueva VM falla con: <code>ZonalAllocationFailed</code>. Azure no logra asignar capacidad suficiente para el tamaño solicitado en la zona seleccionada.</p></div>
+        <label>En sus palabras, ¿qué significa ZonalAllocationFailed?</label><textarea data-save="s3_meaning"></textarea>
+        <table>
+          <thead><tr><th>Alternativa</th><th>Ventaja</th><th>Riesgo / limitación</th><th>¿La usarían?</th></tr></thead>
+          <tbody>
+            <tr><td>Reintentar</td><td><input type="text" data-save="s3_r1a"></td><td><input type="text" data-save="s3_r1b"></td><td><select data-save="s3_r1c"><option></option><option>Sí</option><option>No</option><option>Temporalmente</option></select></td></tr>
+            <tr><td>Cambiar tamaño de VM</td><td><input type="text" data-save="s3_r2a"></td><td><input type="text" data-save="s3_r2b"></td><td><select data-save="s3_r2c"><option></option><option>Sí</option><option>No</option><option>Temporalmente</option></select></td></tr>
+            <tr><td>Cambiar zona</td><td><input type="text" data-save="s3_r3a"></td><td><input type="text" data-save="s3_r3b"></td><td><select data-save="s3_r3c"><option></option><option>Sí</option><option>No</option><option>Temporalmente</option></select></td></tr>
+            <tr><td>Cambiar región</td><td><input type="text" data-save="s3_r4a"></td><td><input type="text" data-save="s3_r4b"></td><td><select data-save="s3_r4c"><option></option><option>Sí</option><option>No</option><option>Temporalmente</option></select></td></tr>
+            <tr><td>Reserva de capacidad futura</td><td><input type="text" data-save="s3_r5a"></td><td><input type="text" data-save="s3_r5b"></td><td><select data-save="s3_r5c"><option></option><option>Sí</option><option>No</option><option>Como prevención</option></select></td></tr>
+          </tbody>
+        </table>
+        <div class="solution"><strong>Solución orientadora:</strong> Microsoft Learn indica que ante fallas de asignación pueden evaluarse reintentos, otros tamaños, otras zonas/regiones y, para necesidades previsibles de capacidad, reservas de capacidad. La decisión concreta depende de arquitectura, costo, latencia y criticidad. No existe una opción universalmente correcta.</div>
+      </section>
+
+      <section class="stage" data-stage="4" data-title="Declarar incidente">
+        <div class="stage-header"><div><div class="stage-number">Fase 4</div><h2>¿Problema técnico o incidente?</h2></div><span class="pill">Google SRE</span></div>
+        <div class="event danger"><h3>18:20 — Impacto de negocio</h3><p>El <strong>22 %</strong> de las transacciones está fallando. Comercial informa pérdida de ventas y servicio al cliente recibe múltiples reclamos.</p></div>
+        <div class="choice"><label><input type="radio" name="incidentDecision" value="declarar" data-save-radio="incidentDecision">Declarar formalmente un incidente</label></div>
+        <div class="choice"><label><input type="radio" name="incidentDecision" value="seguir" data-save-radio="incidentDecision">Seguir tratándolo como problema operativo normal</label></div>
+        <label>Justificación</label><textarea data-save="s4_why"></textarea>
+        <div class="grid2">
+          <div><label>Severidad propuesta</label><select data-save="s4_sev"><option></option><option>SEV-1 Crítica</option><option>SEV-2 Alta</option><option>SEV-3 Media</option><option>SEV-4 Baja</option></select></div>
+          <div><label>Servicio afectado</label><input type="text" data-save="s4_service"></div>
+        </div>
+        <label>Declaración corta del incidente</label><textarea data-save="s4_decl" placeholder="INC-001..."></textarea>
+        <div class="solution"><strong>Solución recomendada:</strong> declarar el incidente. En la lectura de Google, cuando el impacto, alcance y complejidad justifican coordinación formal, se activan roles y comunicación estructurada. Aquí ya existe afectación directa a transacciones y ventas.</div>
+      </section>
+
+      <section class="stage" data-stage="5" data-title="Presión gerencial">
+        <div class="stage-header"><div><div class="stage-number">Fase 5</div><h2>Tomar decisiones bajo presión</h2></div><span class="pill">Criterio de ingeniería</span></div>
+        <div class="event warn"><h3>18:25 — Mensaje del gerente comercial</h3><p>“Necesito que solucionen esto ya. Aumenten todos los servidores al tamaño más grande disponible.”</p></div>
+        <label>¿Qué respondería el Incident Commander?</label><textarea data-save="s5_response"></textarea>
+        <label>¿Qué riesgos deben revisar antes de ejecutar ese cambio?</label><textarea data-save="s5_risks" placeholder="Costo, disponibilidad, reversibilidad, impacto, evidencia..."></textarea>
+        <div class="solution"><strong>Guía docente:</strong> no se debe ejecutar un cambio grande solo por presión. El error de capacidad ya muestra que “más grande” no garantiza disponibilidad; además hay que revisar costo, riesgo, reversibilidad y evidencia técnica. La respuesta correcta es argumentada, no obediencia automática.</div>
+      </section>
+
+      <section class="stage" data-stage="6" data-title="Nueva evidencia">
+        <div class="stage-header"><div><div class="stage-number">Fase 6</div><h2>Aparece una segunda pista</h2></div><span class="pill">Causa vs correlación</span></div>
+        <div class="event"><h3>18:31 — Revisión de logs</h3><p>A las <strong>17:55</strong> se desplegó una nueva versión del módulo de recomendaciones. Desde ese momento también aumentaron las consultas a la base de datos.</p></div>
+        <label>¿Cuál es ahora su hipótesis principal?</label><textarea data-save="s6_mainhyp"></textarea>
+        <label>¿Qué evidencia necesitarían para confirmar o descartar esa hipótesis?</label><textarea data-save="s6_evidence"></textarea>
+        <div class="callout info"><strong>Pregunta clave:</strong> ¿que dos eventos ocurran al mismo tiempo demuestra causalidad?</div>
+        <div class="solution"><strong>Guía docente:</strong> no. Existe correlación temporal, pero aún se debe validar. La campaña elevó tráfico y el despliegue elevó consultas; ambos pueden contribuir. La hipótesis debe probarse con logs, métricas comparativas y, si es viable, rollback controlado.</div>
+      </section>
+
+      <section class="stage" data-stage="7" data-title="Decidir respuesta">
+        <div class="stage-header"><div><div class="stage-number">Fase 7</div><h2>Decisión de mitigación</h2></div><span class="pill">Rollback</span></div>
+        <p>Califiquen cada opción de <strong>1 (muy desfavorable)</strong> a <strong>5 (muy favorable)</strong>. La tabla calcula un puntaje ponderado.</p>
+        <table id="decisionTable">
+          <thead><tr><th>Criterio</th><th>Peso</th><th>A. Más infraestructura</th><th>B. Rollback</th><th>C. Rollback + capacidad temporal</th><th>D. Otra</th></tr></thead>
+          <tbody>
+            <tr data-weight="25"><td>Tiempo de recuperación</td><td>25%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+            <tr data-weight="20"><td>Riesgo técnico</td><td>20%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+            <tr data-weight="20"><td>Impacto cliente</td><td>20%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+            <tr data-weight="15"><td>Reversibilidad</td><td>15%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+            <tr data-weight="10"><td>Costo</td><td>10%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+            <tr data-weight="10"><td>Complejidad</td><td>10%</td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="A"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="B"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="C"></td><td><input class="matrix-input" type="number" min="1" max="5" data-matrix="D"></td></tr>
+          </tbody>
+          <tfoot><tr><th colspan="2">Puntaje ponderado / 5</th><th id="scoreA">0.00</th><th id="scoreB">0.00</th><th id="scoreC">0.00</th><th id="scoreD">0.00</th></tr></tfoot>
+        </table>
+        <label>Decisión del equipo y justificación</label><textarea data-save="s7_decision"></textarea>
+        <div class="solution"><strong>Solución pedagógica sugerida:</strong> con la evidencia del caso, un rollback controlado es una respuesta fuerte porque existe un cambio reciente relacionado temporalmente con el aumento de consultas. Si persiste saturación por demanda, puede complementarse con una medida temporal de capacidad. Google resalta rollback conocido/probado y despliegues progresivos como prácticas que limitan el impacto.</div>
+      </section>
+
+      <section class="stage" data-stage="8" data-title="Comunicar y recuperar">
+        <div class="stage-header"><div><div class="stage-number">Fase 8</div><h2>Comunicación y recuperación</h2></div><span class="pill">Google SRE</span></div>
+        <label>Mensaje técnico al equipo de infraestructura</label><textarea data-save="s8_tech" placeholder="Estado, evidencia, acción en curso..."></textarea>
+        <label>Mensaje ejecutivo para gerencia</label><textarea data-save="s8_exec" placeholder="Impacto, acción, siguiente actualización..."></textarea>
+        <div class="event"><h3>18:44 — Resultado de la mitigación</h3><p>Se ejecuta rollback. La CPU baja a <strong>67 %</strong>, la latencia a <strong>950 ms</strong> y los errores de transacción pasan de <strong>22 % a 1,2 %</strong>.</p></div>
+        <label>¿Cerrarían ya el incidente? ¿Qué validarían antes?</label><textarea data-save="s8_close"></textarea>
+        <div class="solution"><strong>Solución recomendada:</strong> no cerrar inmediatamente. Validar estabilidad, transacciones, consistencia de datos, logs, métricas y experiencia del usuario. La mitigación muestra mejora, pero el cierre exige comprobar recuperación sostenida.</div>
+      </section>
+
+      <section class="stage" data-stage="9" data-title="Postmortem">
+        <div class="stage-header"><div><div class="stage-number">Fase 9</div><h2>Postmortem sin culpa</h2></div><span class="pill">Aprender</span></div>
+        <div class="grid2">
+          <div><label>Impacto</label><textarea data-save="s9_impact"></textarea></div>
+          <div><label>Causa inmediata</label><textarea data-save="s9_immediate"></textarea></div>
+          <div><label>Causa raíz</label><textarea data-save="s9_root"></textarea></div>
+          <div><label>Factores contribuyentes</label><textarea data-save="s9_contrib"></textarea></div>
+          <div><label>¿Qué funcionó bien?</label><textarea data-save="s9_good"></textarea></div>
+          <div><label>¿Qué debemos mejorar?</label><textarea data-save="s9_improve"></textarea></div>
+        </div>
+        <div class="callout danger"><strong>Evitar:</strong> “el desarrollador cometió un error”. <strong>Preferir:</strong> describir la condición del sistema o proceso que permitió el incidente.</div>
+        <div class="solution">
+          <strong>Solución orientadora del caso:</strong>
+          <p><strong>Causa inmediata probable:</strong> la nueva versión incrementó las consultas a la base de datos y elevó el consumo bajo una demanda extraordinaria.</p>
+          <p><strong>Factores contribuyentes:</strong> campaña con 4× de tráfico; intento de escalamiento que falló por capacidad zonal; despliegue cerca de una ventana crítica; falta de rollout progresivo o validación previa suficiente.</p>
+          <p><strong>Lectura SRE:</strong> el postmortem debe buscar mejoras de sistema, herramientas y proceso, no culpables.</p>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="10" data-title="Plan de mejora y entrega">
+        <div class="stage-header"><div><div class="stage-number">Fase 10</div><h2>Convertir el aprendizaje en acciones</h2></div><span class="pill">Microsoft Project</span></div>
+        <p>Transformen el postmortem en trabajo planificado. Esto conecta la gestión del incidente con la gestión del proyecto.</p>
+        <table>
+          <thead><tr><th>Acción</th><th>Responsable</th><th>Prioridad</th><th>Fecha objetivo</th></tr></thead>
+          <tbody>
+            <tr><td><input type="text" data-save="p1a" value="Implementar rollout progresivo"></td><td><input type="text" data-save="p1b"></td><td><select data-save="p1c"><option>Alta</option><option>Media</option><option>Baja</option></select></td><td><input type="date" data-save="p1d"></td></tr>
+            <tr><td><input type="text" data-save="p2a" value="Documentar y probar rollback"></td><td><input type="text" data-save="p2b"></td><td><select data-save="p2c"><option>Alta</option><option>Media</option><option>Baja</option></select></td><td><input type="date" data-save="p2d"></td></tr>
+            <tr><td><input type="text" data-save="p3a" value="Revisar estrategia de autoescalado"></td><td><input type="text" data-save="p3b"></td><td><select data-save="p3c"><option>Alta</option><option>Media</option><option>Baja</option></select></td><td><input type="date" data-save="p3d"></td></tr>
+            <tr><td><input type="text" data-save="p4a" value="Evaluar reserva de capacidad"></td><td><input type="text" data-save="p4b"></td><td><select data-save="p4c"><option>Media</option><option>Alta</option><option>Baja</option></select></td><td><input type="date" data-save="p4d"></td></tr>
+            <tr><td><input type="text" data-save="p5a" value="Crear prueba de carga antes de campañas"></td><td><input type="text" data-save="p5b"></td><td><select data-save="p5c"><option>Alta</option><option>Media</option><option>Baja</option></select></td><td><input type="date" data-save="p5d"></td></tr>
+          </tbody>
+        </table>
+        <h3>Prototipo ingenieril a entregar</h3>
+        <div class="grid2">
+          <div class="summary-card">✓ Diagrama de arquitectura afectada</div>
+          <div class="summary-card">✓ Línea de tiempo del incidente</div>
+          <div class="summary-card">✓ Árbol de diagnóstico e hipótesis</div>
+          <div class="summary-card">✓ Matriz de decisiones</div>
+          <div class="summary-card">✓ Runbook de recuperación</div>
+          <div class="summary-card">✓ Comunicaciones técnica y ejecutiva</div>
+          <div class="summary-card">✓ Postmortem sin culpa</div>
+          <div class="summary-card">✓ Plan de mejora + referencias APA</div>
+        </div>
+        <div class="solution"><strong>Guía docente:</strong> Microsoft presenta la gestión de proyectos como una forma de organizar tareas, responsables, cronogramas y visibilidad del trabajo. Aquí las acciones del postmortem deben convertirse en actividades concretas con responsables, prioridad y fecha.</div>
+      </section>
+
+      <section class="stage" data-stage="11" data-title="Rúbrica y fuentes">
+        <div class="stage-header"><div><div class="stage-number">Cierre</div><h2>Rúbrica y fuentes base</h2></div><span class="pill">APA</span></div>
+        <table>
+          <thead><tr><th>Criterio</th><th>Peso</th></tr></thead>
+          <tbody>
+            <tr><td>Análisis del incidente</td><td>15 %</td></tr>
+            <tr><td>Investigación de causas</td><td>15 %</td></tr>
+            <tr><td>Uso de evidencias</td><td>10 %</td></tr>
+            <tr><td>Calidad de la solución</td><td>15 %</td></tr>
+            <tr><td>Organización y trabajo del equipo</td><td>10 %</td></tr>
+            <tr><td>Prototipo ingenieril</td><td>15 %</td></tr>
+            <tr><td>Gestión y comunicación del incidente</td><td>10 %</td></tr>
+            <tr><td>Postmortem y aprendizaje</td><td>5 %</td></tr>
+            <tr><td>Fuentes y APA</td><td>5 %</td></tr>
+          </tbody>
+        </table>
+        <h3>Lecturas utilizadas como base</h3>
+        <p class="ref"><strong>Microsoft.</strong> Administración de proyectos. https://www.microsoft.com/es-mx/microsoft-365/project/project-management</p>
+        <p class="ref"><strong>Project Management Institute.</strong> Retrabajo de equipo: cómo y por qué evaluar y calificar a su equipo de proyecto. https://www.pmi.org/learning/library/es-retrabajo-de-equipo-12297</p>
+        <p class="ref"><strong>Microsoft Learn.</strong> Solución de errores de asignación de máquinas virtuales en Azure. https://learn.microsoft.com/es-es/troubleshoot/azure/virtual-machines/windows/allocation-failure</p>
+        <p class="ref"><strong>Google Cloud.</strong> Incident management at Google: Adventures in SRE-land. https://cloud.google.com/blog/products/gcp/incident-management-at-google-adventures-in-sre-land/</p>
+        <div class="callout ok"><strong>Pregunta de cierre:</strong> ¿qué fue más importante para recuperar el servicio: conocer Azure, tener más infraestructura o contar con un proceso organizado de respuesta?</div>
+      </section>
+
+      <div class="footer-actions">
+        <button id="prevBottom" class="secondary" type="button">← Anterior</button>
+        <button id="markDone" class="good" type="button">Marcar fase como completada</button>
+        <button id="nextBottom" type="button">Siguiente →</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root=document.getElementById('warRoomApp');
+  const stages=[...root.querySelectorAll('.stage')];
+  const nav=document.getElementById('phaseNav');
+  const progress=document.getElementById('progressBar');
+  let current=0, teacher=false;
+  let elapsed=0, timerId=null;
+  const state={};
+
+  stages.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=`${i}. ${s.dataset.title}`;
+    b.addEventListener('click',()=>showStage(i));
+    nav.appendChild(b);
+  });
+  const navBtns=[...nav.querySelectorAll('button')];
+
+  function showStage(i){
+    current=Math.max(0,Math.min(stages.length-1,i));
+    stages.forEach((s,idx)=>s.classList.toggle('active',idx===current));
+    navBtns.forEach((b,idx)=>b.classList.toggle('active',idx===current));
+    document.getElementById('prevBtn').disabled=current===0;
+    document.getElementById('prevBottom').disabled=current===0;
+    document.getElementById('nextBtn').disabled=current===stages.length-1;
+    document.getElementById('nextBottom').disabled=current===stages.length-1;
+    progress.style.width=((current)/(stages.length-1)*100)+'%';
+    stages[current].scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function next(){showStage(current+1)}
+  function prev(){showStage(current-1)}
+  document.getElementById('nextBtn').addEventListener('click',next);
+  document.getElementById('nextBottom').addEventListener('click',next);
+  document.getElementById('prevBtn').addEventListener('click',prev);
+  document.getElementById('prevBottom').addEventListener('click',prev);
+
+  document.getElementById('teacherBtn').addEventListener('click',()=>{
+    teacher=!teacher;
+    root.classList.toggle('teacher-mode',teacher);
+    document.getElementById('teacherBtn').textContent=teacher?'Desactivar modo docente':'Activar modo docente';
+    document.getElementById('modeStatus').textContent=teacher?'Modo docente activo: se muestran las soluciones orientadoras.':'Modo estudiante: las soluciones permanecen ocultas.';
+  });
+
+  document.getElementById('markDone').addEventListener('click',()=>{
+    navBtns[current].classList.add('done');
+    if(current<stages.length-1) next();
+  });
+
+  document.getElementById('printBtn').addEventListener('click',()=>window.print());
+
+  root.querySelectorAll('[data-save]').forEach(el=>{
+    const key=el.dataset.save;
+    el.addEventListener('input',()=>state[key]=el.value);
+    el.addEventListener('change',()=>state[key]=el.value);
+  });
+  root.querySelectorAll('[data-save-radio]').forEach(el=>{
+    el.addEventListener('change',()=>state[el.dataset.saveRadio]=el.value);
+  });
+
+  function updateMatrix(){
+    const totals={A:0,B:0,C:0,D:0};
+    const rows=[...document.querySelectorAll('#decisionTable tbody tr')];
+    rows.forEach(row=>{
+      const w=Number(row.dataset.weight)/100;
+      row.querySelectorAll('[data-matrix]').forEach(inp=>{
+        let v=Number(inp.value);
+        if(!Number.isFinite(v)) v=0;
+        v=Math.max(0,Math.min(5,v));
+        totals[inp.dataset.matrix]+=v*w;
+      });
+    });
+    Object.keys(totals).forEach(k=>document.getElementById('score'+k).textContent=totals[k].toFixed(2));
+  }
+  root.querySelectorAll('[data-matrix]').forEach(inp=>inp.addEventListener('input',updateMatrix));
+
+  function fmt(sec){
+    const m=Math.floor(sec/60).toString().padStart(2,'0');
+    const s=(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+  function renderTimer(){document.getElementById('timer').textContent=fmt(elapsed)}
+  document.getElementById('startTimer').addEventListener('click',()=>{
+    if(timerId) return;
+    timerId=setInterval(()=>{elapsed++;renderTimer()},1000);
+  });
+  document.getElementById('pauseTimer').addEventListener('click',()=>{clearInterval(timerId);timerId=null});
+  document.getElementById('resetTimer').addEventListener('click',()=>{clearInterval(timerId);timerId=null;elapsed=0;renderTimer()});
+
+  document.getElementById('resetBtn').addEventListener('click',()=>{
+    const ok=confirm('¿Reiniciar toda la actividad? Se borrarán las respuestas escritas en esta página.');
+    if(!ok) return;
+    root.querySelectorAll('textarea,input[type="text"],input[type="number"],input[type="date"]').forEach(el=>{
+      if(el.hasAttribute('value')) el.value=el.getAttribute('value'); else el.value='';
+    });
+    root.querySelectorAll('select').forEach(el=>el.selectedIndex=0);
+    root.querySelectorAll('input[type="radio"],input[type="checkbox"]').forEach(el=>el.checked=false);
+    navBtns.forEach(b=>b.classList.remove('done'));
+    Object.keys(state).forEach(k=>delete state[k]);
+    elapsed=0;clearInterval(timerId);timerId=null;renderTimer();updateMatrix();showStage(0);
+  });
+
+  showStage(0); renderTimer(); updateMatrix();
+})();
+</script>
+</body>
+</html>
